@@ -237,8 +237,9 @@ public:
         }
         }
 
-		// rank checking is different here because the final value of an expression must be
-		// equal to one. the range of rank is [0, 1] inside loop. 
+        // rank checking is different here because the final value of an
+        // expression must be equal to one. the range of rank is [0, 1] inside
+        // loop.
         if (rank < 1) {
             reportError("missing operand");
             return std::vector<Token>{};
@@ -252,6 +253,87 @@ public:
             return std::vector<Token>{};
         }
         return tokens;
+    }
+};
+
+/* * INTERPRETER * */
+class Interpreter {
+private:
+    std::vector<Token> infixTokens;
+    std::vector<Token> postfixTokens;
+
+    std::stack<Token> operatorStack;
+
+    void convertToPostfix() {
+        for (auto& token : infixTokens) {
+            auto tokenType = token.getTokenType();
+            auto tokenPrecedence = token.getPrecedence();
+            auto tokenAssoc = token.getAssociativity();
+
+            if (tokenType == TokenType::NUMBER) {
+                postfixTokens.push_back(token);
+            } else {
+                if (operatorStack.empty() || tokenType == TokenType::LPAREN) {
+                    operatorStack.push(token);
+                    continue;
+                }
+                if (tokenType == TokenType::RPAREN) {
+                    while (operatorStack.top().getTokenType() !=
+                           TokenType::LPAREN) {
+                        postfixTokens.push_back(operatorStack.top());
+                        operatorStack.pop();
+                        // we need not worry about stack being empty because
+                        // lparen is 100% present due to checking by lexer
+                    }
+					operatorStack.pop(); // remove LPAREN from operator stack
+					continue;
+                }
+                auto topOperator = operatorStack.top();
+                if (tokenPrecedence > topOperator.getPrecedence()) {
+                    operatorStack.push(token);
+                } else if (tokenPrecedence < topOperator.getPrecedence()) {
+                    while (operatorStack.top().getPrecedence() >=
+                           tokenPrecedence) {
+                        postfixTokens.push_back(operatorStack.top());
+                        operatorStack.pop();
+                        if (operatorStack.empty()) {
+                            break;
+                        }
+                    }
+					operatorStack.push(token);
+                } else {
+                    if (tokenAssoc == Associativity::LEFT) {
+                        postfixTokens.push_back(operatorStack.top());
+                        operatorStack.pop();
+                        operatorStack.push(token);
+                    } else {
+                        operatorStack.push(token);
+                    }
+                }
+            }
+        }
+
+		while (!operatorStack.empty()) {
+			postfixTokens.push_back(operatorStack.top());
+			operatorStack.pop();
+		}
+    }
+
+    double evalPostfix() {return 0;}
+
+public:
+    Interpreter(std::vector<Token> tokens) : infixTokens(tokens){};
+
+    void getPostfix() {
+        for (auto& tok : postfixTokens) {
+            std::cout << tok.getValue() << " ";
+        }
+		std::cout << "\n";
+    }
+
+    double evaluate() {
+        convertToPostfix();
+        return evalPostfix();
     }
 };
 
@@ -276,9 +358,14 @@ int main(int argc, char const* argv[]) {
         auto lexer = Lexer(input);
         auto tokens = lexer.tokenize();
         if (tokens.size() == 0) {
-            // lexer encountered an error during tokenization, the expression is invalid
+            // lexer encountered an error during tokenization, the expression is
+            // invalid
             continue;
         }
+
+		auto interpreter = Interpreter(tokens);
+		interpreter.evaluate();
+		interpreter.getPostfix();
 
         std::cout << "success"
                   << "\n";
