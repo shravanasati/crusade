@@ -99,6 +99,11 @@ Token RPARENToken() {
 
 /* * LEXER * */
 
+struct makeTokenResult {
+	Token token;
+	bool success;
+};
+
 class Lexer {
 private:
     const std::string& infix;
@@ -116,16 +121,23 @@ private:
 
     bool isDecimal(char c) { return c == '.'; }
 
-    Token makeNumberToken() {
-        // todo keep count of decimals
+    makeTokenResult makeNumberToken() {
         std::string number;
+        int decimalCount = 0;
         while (true) {
             if (isDigit(currentChar) || isDecimal(currentChar)) {
                 number += currentChar;
+                if (isDecimal(currentChar)) {
+                    decimalCount++;
+                }
+                if (decimalCount > 1) {
+                    reportError("multiple decimals in a number");
+					return makeTokenResult{NumberToken("0"), false};
+                }
                 try {
                     advance();
                 } catch (std::out_of_range) {
-                    return NumberToken(number);
+                    return makeTokenResult{NumberToken(number), true};
                 }
             } else {
                 // since current char is not a digit or a decimal
@@ -135,7 +147,19 @@ private:
                 break;
             }
         }
-        return NumberToken(number);
+		// convert .52 => 0.52
+        if (number[0] == '.') {
+            number = "0" + number;
+        }
+		// convert 52. => 52.0
+        if (number.at(number.size() - 1) == '.') {
+            number += "0";
+        }
+		// convert 52 => 52.0
+        if (decimalCount == 0) {
+            number += ".0";
+        }
+        return makeTokenResult{NumberToken(number), true};
     }
 
     void reportError(std::string error, int offset = -1) {
@@ -200,8 +224,11 @@ public:
                 tokens.push_back(RPARENToken());
                 bracketPositions.pop();
             } else if (isDigit(currentChar) || isDecimal(currentChar)) {
-                auto numberToken = makeNumberToken();
-                tokens.push_back(numberToken);
+                auto numberTokenResult = makeNumberToken();
+				if (!numberTokenResult.success) {
+					return std::vector<Token>{};
+				}
+                tokens.push_back(numberTokenResult.token);
             } else {
                 reportError("invalid character");
                 return std::vector<Token>{};
@@ -285,8 +312,8 @@ private:
                         // we need not worry about stack being empty because
                         // lparen is 100% present due to checking by lexer
                     }
-					operatorStack.pop(); // remove LPAREN from operator stack
-					continue;
+                    operatorStack.pop(); // remove LPAREN from operator stack
+                    continue;
                 }
                 auto topOperator = operatorStack.top();
                 if (tokenPrecedence > topOperator.getPrecedence()) {
@@ -300,7 +327,7 @@ private:
                             break;
                         }
                     }
-					operatorStack.push(token);
+                    operatorStack.push(token);
                 } else {
                     if (tokenAssoc == Associativity::LEFT) {
                         postfixTokens.push_back(operatorStack.top());
@@ -313,13 +340,57 @@ private:
             }
         }
 
-		while (!operatorStack.empty()) {
-			postfixTokens.push_back(operatorStack.top());
-			operatorStack.pop();
-		}
+        while (!operatorStack.empty()) {
+            postfixTokens.push_back(operatorStack.top());
+            operatorStack.pop();
+        }
     }
 
-    double evalPostfix() {return 0;}
+    long double resolveOperator(TokenType tokenType, std::stack<long double>& operands) {
+        auto num2 = operands.top();
+        operands.pop();
+        auto num1 = operands.top();
+        operands.pop();
+        switch (tokenType) {
+        case TokenType::PLUS_OP:
+            return (num1 + num2);
+            break;
+        case TokenType::MINUS_OP:
+            return (num1 - num2);
+            break;
+
+        case TokenType::MULTIPLY_OP:
+            return (num1 * num2);
+            break;
+        case TokenType::DIVIDE_OP:
+            return (num1 / num2);
+            break;
+        case TokenType::FLOOR_DIVIDE_OP:
+            return (int(num1 / num2));
+            break;
+
+        case TokenType::EXPONENT_OP:
+            return (pow(num1, num2));
+            break;
+
+        default:
+            throw std::logic_error("unknown token type to resolve");
+            break;
+        }
+    }
+
+    double evalPostfix() {
+        std::stack<long double> operands;
+        for (auto token : postfixTokens) {
+            auto tokenType = token.getTokenType();
+            if (tokenType == TokenType::NUMBER) {
+                operands.push(std::stold(token.getValue()));
+            } else {
+                operands.push(resolveOperator(tokenType, operands));
+            }
+        }
+        return operands.top();
+    }
 
 public:
     Interpreter(std::vector<Token> tokens) : infixTokens(tokens){};
@@ -328,7 +399,7 @@ public:
         for (auto& tok : postfixTokens) {
             std::cout << tok.getValue() << " ";
         }
-		std::cout << "\n";
+        std::cout << "\n";
     }
 
     double evaluate() {
@@ -363,12 +434,8 @@ int main(int argc, char const* argv[]) {
             continue;
         }
 
-		auto interpreter = Interpreter(tokens);
-		interpreter.evaluate();
-		interpreter.getPostfix();
-
-        std::cout << "success"
-                  << "\n";
+        auto interpreter = Interpreter(tokens);
+        std::cout << interpreter.evaluate() << "\n";
     }
 
     return 0;
