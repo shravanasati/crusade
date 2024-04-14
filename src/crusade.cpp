@@ -100,8 +100,8 @@ Token RPARENToken() {
 /* * LEXER * */
 
 struct makeTokenResult {
-	Token token;
-	bool success;
+    Token token;
+    bool success;
 };
 
 class Lexer {
@@ -132,7 +132,7 @@ private:
                 }
                 if (decimalCount > 1) {
                     reportError("multiple decimals in a number");
-					return makeTokenResult{NumberToken("0"), false};
+                    return makeTokenResult{NumberToken("0"), false};
                 }
                 try {
                     advance();
@@ -147,15 +147,15 @@ private:
                 break;
             }
         }
-		// convert .52 => 0.52
+        // convert .52 => 0.52
         if (number[0] == '.') {
             number = "0" + number;
         }
-		// convert 52. => 52.0
+        // convert 52. => 52.0
         if (number.at(number.size() - 1) == '.') {
             number += "0";
         }
-		// convert 52 => 52.0
+        // convert 52 => 52.0
         if (decimalCount == 0) {
             number += ".0";
         }
@@ -225,9 +225,9 @@ public:
                 bracketPositions.pop();
             } else if (isDigit(currentChar) || isDecimal(currentChar)) {
                 auto numberTokenResult = makeNumberToken();
-				if (!numberTokenResult.success) {
-					return std::vector<Token>{};
-				}
+                if (!numberTokenResult.success) {
+                    return std::vector<Token>{};
+                }
                 tokens.push_back(numberTokenResult.token);
             } else {
                 reportError("invalid character");
@@ -346,7 +346,8 @@ private:
         }
     }
 
-    long double resolveOperator(TokenType tokenType, std::stack<long double>& operands) {
+    long double resolveOperator(TokenType tokenType,
+                                std::stack<long double>& operands) {
         auto num2 = operands.top();
         operands.pop();
         auto num1 = operands.top();
@@ -393,7 +394,9 @@ private:
     }
 
 public:
-    Interpreter(std::vector<Token> tokens) : infixTokens(tokens){};
+    Interpreter(std::vector<Token> tokens) : infixTokens(tokens) {
+        convertToPostfix();
+    };
 
     void getPostfix() {
         for (auto& tok : postfixTokens) {
@@ -402,15 +405,31 @@ public:
         std::cout << "\n";
     }
 
-    double evaluate() {
-        convertToPostfix();
-        return evalPostfix();
+    std::string getInfix() {
+        std::stack<std::string> expr;
+        std::string e, e1, e2;
+        for (auto& token : postfixTokens) {
+            if (token.getTokenType() == TokenType::NUMBER) {
+                expr.push(token.getValue());
+            } else {
+                e2 = expr.top();
+                expr.pop();
+                e1 = expr.top();
+                expr.pop();
+                e = "(" + e1 + " " + token.getValue() + " " + e2 + ")";
+                expr.push(e);
+            }
+        }
+        return expr.top();
     }
+
+    double evaluate() { return evalPostfix(); }
 };
 
 /* * CRUSADE * */
 
 int main(int argc, char const* argv[]) {
+    auto debug = false;
     while (true) {
         std::string input;
         std::cout << "crusade > ";
@@ -426,6 +445,13 @@ int main(int argc, char const* argv[]) {
             break;
         }
 
+        if (input == "/debug") {
+            debug = !debug;
+            std::cout << "debug mode " << ((debug) ? "enabled" : "disabled")
+                      << '\n';
+            continue;
+        }
+
         auto lexer = Lexer(input);
         auto tokens = lexer.tokenize();
         if (tokens.size() == 0) {
@@ -435,6 +461,10 @@ int main(int argc, char const* argv[]) {
         }
 
         auto interpreter = Interpreter(tokens);
+        if (debug) {
+            std::cout << interpreter.getInfix() << "\n";
+        }
+
         std::cout << interpreter.evaluate() << "\n";
     }
 
