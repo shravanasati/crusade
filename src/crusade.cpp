@@ -28,6 +28,8 @@ enum class Associativity { LEFT, RIGHT };
 
 enum class TokenType {
     NUMBER,
+    UNARY_PLUS_OP,
+    UNARY_MINUS_OP,
     PLUS_OP,
     MINUS_OP,
     MULTIPLY_OP,
@@ -59,10 +61,29 @@ public:
     bool operator==(const Token& other) const {
         return tokenType == other.tokenType;
     }
+
+    bool isNumber() { return tokenType == TokenType::NUMBER; }
+
+    bool isUnaryOperator() {
+        return tokenType == TokenType::UNARY_PLUS_OP ||
+               tokenType == TokenType::UNARY_MINUS_OP;
+    }
+
+    bool isParen() {
+        return tokenType == TokenType::LPAREN || tokenType == TokenType::RPAREN;
+    }
 };
 
 Token NumberToken(std::string value) {
     return Token(value, TokenType::NUMBER, 0, Associativity::LEFT);
+}
+
+Token UnaryPlusToken() {
+    return Token("+", TokenType::UNARY_PLUS_OP, 3, Associativity::RIGHT);
+}
+
+Token UnaryMinusToken() {
+    return Token("-", TokenType::UNARY_MINUS_OP, 3, Associativity::RIGHT);
 }
 
 Token PlusToken() {
@@ -188,9 +209,31 @@ public:
             }
 
             if (currentChar == '+') {
-                tokens.push_back(PlusToken());
+                auto n = tokens.size();
+                if (n == 0) {
+                    tokens.push_back(UnaryPlusToken());
+                } else {
+                    auto lastTokenType = tokens[n - 1].getTokenType();
+                    if (lastTokenType == TokenType::NUMBER ||
+                        lastTokenType == TokenType::RPAREN) {
+                        tokens.push_back(PlusToken());
+                    } else {
+                        tokens.push_back(UnaryPlusToken());
+                    }
+                }
             } else if (currentChar == '-') {
-                tokens.push_back(MinusToken());
+                auto n = tokens.size();
+                if (n == 0) {
+                    tokens.push_back(UnaryMinusToken());
+                } else {
+                    auto lastTokenType = tokens[n - 1].getTokenType();
+                    if (lastTokenType == TokenType::NUMBER ||
+                        lastTokenType == TokenType::RPAREN) {
+                        tokens.push_back(MinusToken());
+                    } else {
+                        tokens.push_back(UnaryMinusToken());
+                    }
+                }
             } else if (currentChar == '*') {
                 tokens.push_back(MultiplyToken());
             } else if (currentChar == '/') {
@@ -236,11 +279,14 @@ public:
 
             {
                 // * new scope to allow control transfer from goto
-                auto lastTokenType = tokens.back().getTokenType();
-                auto isNumber = lastTokenType == TokenType::NUMBER;
-                auto isParen = lastTokenType == TokenType::LPAREN ||
-                               lastTokenType == TokenType::RPAREN;
-                if (isNumber) {
+                auto lastToken = tokens.back();
+                auto isNumber = lastToken.isNumber();
+                auto isParen = lastToken.isParen();
+                auto isUnary = lastToken.isUnaryOperator();
+                if (isUnary) {
+                    // ignore unary operators in rank calculation
+                    goto next;
+                } else if (isNumber) {
                     rank++;
                 } else if (!isParen) {
                     rank--;
@@ -346,8 +392,17 @@ private:
         }
     }
 
-    long double resolveOperator(TokenType tokenType,
+    long double resolveOperator(Token token,
                                 std::stack<long double>& operands) {
+
+        if (token.isUnaryOperator()) {
+            auto num = operands.top();
+            operands.pop();
+            auto sign = (token.getTokenType() == TokenType::UNARY_PLUS_OP) ? 1 : -1;
+            return sign * num;
+        }
+        
+        auto tokenType = token.getTokenType();
         auto num2 = operands.top();
         operands.pop();
         auto num1 = operands.top();
@@ -383,11 +438,10 @@ private:
     double evalPostfix() {
         std::stack<long double> operands;
         for (auto token : postfixTokens) {
-            auto tokenType = token.getTokenType();
-            if (tokenType == TokenType::NUMBER) {
+            if (token.isNumber()) {
                 operands.push(std::stold(token.getValue()));
             } else {
-                operands.push(resolveOperator(tokenType, operands));
+                operands.push(resolveOperator(token, operands));
             }
         }
         return operands.top();
@@ -398,25 +452,31 @@ public:
         convertToPostfix();
     };
 
-    void getPostfix() {
+    std::string getPostfix() {
+        std::stringstream ss;
         for (auto& tok : postfixTokens) {
-            std::cout << tok.getValue() << " ";
+            ss << tok.getValue() << " ";
         }
-        std::cout << "\n";
+        return ss.str();
     }
 
     std::string getInfix() {
         std::stack<std::string> expr;
-        std::string e, e1, e2;
         for (auto& token : postfixTokens) {
-            if (token.getTokenType() == TokenType::NUMBER) {
+            if (token.isNumber()) {
                 expr.push(token.getValue());
+            } else if (token.isUnaryOperator()) {
+                auto e1 = expr.top();
+                expr.pop();
+                std::string sign = (token.getTokenType() == TokenType::UNARY_PLUS_OP) ? "+" : "-";
+                auto e = sign  + "(" + e1 + ")";
+                expr.push(e);
             } else {
-                e2 = expr.top();
+                auto e2 = expr.top();
                 expr.pop();
-                e1 = expr.top();
+                auto e1 = expr.top();
                 expr.pop();
-                e = "(" + e1 + " " + token.getValue() + " " + e2 + ")";
+                auto e = "(" + e1 + " " + token.getValue() + " " + e2 + ")";
                 expr.push(e);
             }
         }
