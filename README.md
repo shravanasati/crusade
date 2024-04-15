@@ -22,5 +22,5 @@ g++ -o crusade ./src/crusade.cpp
 ### Further Goals
 
 - [x] Support for unary operators
-- [ ] Pretty output
+- [x] Pretty output
 - [ ] Input history

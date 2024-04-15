@@ -23,6 +23,16 @@ inline void trim(std::string& s) {
     rtrim(s);
 }
 
+/* * COLORS * */
+
+const std::string COLOR_RED = "\033[31m";
+const std::string COLOR_GREEN = "\033[32m";
+const std::string COLOR_YELLOW = "\033[33m";
+const std::string COLOR_BLUE = "\033[34m";
+const std::string COLOR_PURPLE = "\033[35m";
+const std::string COLOR_CYAN = "\033[36m";
+const std::string COLOR_RESET = "\033[0m";
+
 /* * TOKENS * */
 enum class Associativity { LEFT, RIGHT };
 
@@ -189,7 +199,7 @@ private:
         }
         std::cout << infix << "\n";
         std::cout << std::string(offset, ' ');
-        std::cout << "^ " << error << std::endl;
+        std::cout << COLOR_RED << "^ " << error << COLOR_RESET << std::endl;
     }
 
 public:
@@ -398,10 +408,11 @@ private:
         if (token.isUnaryOperator()) {
             auto num = operands.top();
             operands.pop();
-            auto sign = (token.getTokenType() == TokenType::UNARY_PLUS_OP) ? 1 : -1;
+            auto sign =
+                (token.getTokenType() == TokenType::UNARY_PLUS_OP) ? 1 : -1;
             return sign * num;
         }
-        
+
         auto tokenType = token.getTokenType();
         auto num2 = operands.top();
         operands.pop();
@@ -468,8 +479,10 @@ public:
             } else if (token.isUnaryOperator()) {
                 auto e1 = expr.top();
                 expr.pop();
-                std::string sign = (token.getTokenType() == TokenType::UNARY_PLUS_OP) ? "+" : "-";
-                auto e = sign  + "(" + e1 + ")";
+                std::string sign =
+                    (token.getTokenType() == TokenType::UNARY_PLUS_OP) ? "+"
+                                                                       : "-";
+                auto e = sign + "(" + e1 + ")";
                 expr.push(e);
             } else {
                 auto e2 = expr.top();
@@ -488,11 +501,19 @@ public:
 
 /* * CRUSADE * */
 
+std::string purple(std::string s) { return COLOR_PURPLE + s + COLOR_RESET; }
+
+std::string cyan(std::string s) { return COLOR_CYAN + s + COLOR_RESET; }
+
+std::string green(std::string s) { return COLOR_GREEN + s + COLOR_RESET; }
+
+std::string yellow(std::string s) { return COLOR_YELLOW + s + COLOR_RESET; }
+
 int main(int argc, char const* argv[]) {
     auto debug = false;
     while (true) {
         std::string input;
-        std::cout << "crusade > ";
+        std::cout << cyan("crusade > ");
         std::getline(std::cin, input);
         trim(input);
 
@@ -501,14 +522,14 @@ int main(int argc, char const* argv[]) {
         }
 
         if (input == "quit" || input == "exit" || input == "/q") {
-            std::cout << "bye" << std::endl;
+            std::cout << purple("bye") << std::endl;
             break;
         }
 
         if (input == "/debug") {
             debug = !debug;
-            std::cout << "debug mode " << ((debug) ? "enabled" : "disabled")
-                      << '\n';
+            std::cout << purple("debug mode ")
+                      << purple((debug) ? "enabled" : "disabled") << '\n';
             continue;
         }
 
@@ -522,10 +543,10 @@ int main(int argc, char const* argv[]) {
 
         auto interpreter = Interpreter(tokens);
         if (debug) {
-            std::cout << interpreter.getInfix() << "\n";
+            std::cout << yellow(interpreter.getInfix()) << "\n";
         }
 
-        std::cout << interpreter.evaluate() << "\n";
+        std::cout << green(std::to_string(interpreter.evaluate())) << "\n";
     }
 
     return 0;
