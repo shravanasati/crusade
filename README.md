@@ -10,6 +10,7 @@ crusade first tokenizes the given input and classifies them into numbers, operat
 
 The next step is to use the [shunting yard algorithm](https://en.wikipedia.org/wiki/Shunting_yard_algorithm) to convert the infix expression to the reverse polish notation (aka postfix expression, eg. `1 + 2 - 3` => `1 2 + 3 -`). I've also added a slight modification by providing unary operators with the highest precedence and right associativity. The evaluation of the postfix expression is pretty easy.
 
+
 ### Build from source
 
 It's only a single file (I am scared of undefined references linker errors).
@@ -17,6 +18,14 @@ It's only a single file (I am scared of undefined references linker errors).
 ```sh
 g++ -o crusade ./src/crusade.cpp
 ```
+
+### Usage
+
+Just launch the executable file and you'd see a prompt. Enter your expressions here and press enter.
+
+You can type `/q`, `exit` or `quit` to exit the application.
+
+You can also toggle the debug mode using the `/debug` command. It will show your given expression in a parenthesized manner. 
 
 
 ### Further Goals
