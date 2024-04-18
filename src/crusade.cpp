@@ -516,6 +516,8 @@ int main(int argc, char const* argv[]) {
         std::cout << cyan("crusade > ");
         std::getline(std::cin, input);
         trim(input);
+        std::transform(input.begin(), input.end(), input.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
 
         if (input == "") {
             continue;
