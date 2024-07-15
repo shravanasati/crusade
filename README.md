@@ -2,7 +2,7 @@
 
 A simple math interpreter written in C++ using the Shunting-yard algorithm.
 
-<video controls src="assets/demo.mp4" title="Crusade Demo"></video>
+Watch the [demo video](https://youtu.be/KPOjq7f3VuU).
 
 ### Working mechanism
 
