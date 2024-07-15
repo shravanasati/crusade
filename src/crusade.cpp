@@ -1,5 +1,6 @@
 #include <bits/stdc++.h>
 #include <iostream>
+#include "linenoise.h"
 
 /* * STRINGUTILS * */
 // trim from start (in place)
@@ -509,12 +510,46 @@ std::string green(std::string s) { return COLOR_GREEN + s + COLOR_RESET; }
 
 std::string yellow(std::string s) { return COLOR_YELLOW + s + COLOR_RESET; }
 
+/* * LINENOISE CONFIG * */
+
+static const char* examples[] = {
+    "/debug", "/q", "exit", "quit", NULL};
+
+void completionHook(char const* prefix, linenoiseCompletions* lc) {
+    size_t i;
+
+    for (i = 0; examples[i] != NULL; ++i) {
+        if (strncmp(prefix, examples[i], strlen(prefix)) == 0) {
+            linenoiseAddCompletion(lc, examples[i]);
+        }
+    }
+}
+
 int main(int argc, char const* argv[]) {
+    linenoiseInstallWindowChangeHandler();
+    linenoiseSetCompletionCallback(completionHook);
+    linenoiseHistorySetMaxLen(1000);
+    const char* histFile = "~/.crusade_history";
+    linenoiseHistoryLoad(histFile);
+
+    std::cout << purple("exit OR quit OR /q to exit") << '\n';
+
     auto debug = false;
     while (true) {
-        std::string input;
-        std::cout << cyan("crusade > ");
-        std::getline(std::cin, input);
+        char* result = linenoise(cyan("crusade > ").c_str());
+        if (result == NULL) {
+            continue;
+        }
+        if(*result == '\0') {
+            free(result);
+            break;
+        }
+
+        linenoiseHistoryAdd(result);
+
+        std::string input (result);
+        // std::cout << cyan("crusade > ");
+        // std::getline(std::cin, input);
         trim(input);
         std::transform(input.begin(), input.end(), input.begin(),
                        [](unsigned char c) { return std::tolower(c); });
@@ -550,6 +585,9 @@ int main(int argc, char const* argv[]) {
 
         std::cout << green(std::to_string(interpreter.evaluate())) << "\n";
     }
+
+    linenoiseHistorySave(histFile);
+    linenoiseHistoryFree();
 
     return 0;
 }

@@ -13,10 +13,8 @@ The next step is to use the [shunting yard algorithm](https://en.wikipedia.org/w
 
 ### Build from source
 
-It's only a single file (I am scared of undefined references linker errors).
-
 ```sh
-g++ -o crusade ./src/crusade.cpp
+make
 ```
 
 ### Usage
@@ -25,11 +23,19 @@ Just launch the executable file and you'd see a prompt. Enter your expressions h
 
 You can type `/q`, `exit` or `quit` to exit the application.
 
-You can also toggle the debug mode using the `/debug` command. It will show your given expression in a parenthesized manner. 
+You can also toggle the debug mode using the `/debug` command. It will show your given expression in a parenthesized manner.
+
+You can autocomplete these commands by pressing tab.
 
 
 ### Further Goals
 
 - [x] Support for unary operators
 - [x] Pretty output
-- [ ] Input history
+- [x] Input history
+- [x] Tab Completions
+- [ ] Functions
+
+### Acknowledgements
+
+1. The awesome [linenoise](https://github.com/arangodb/linenoise-ng) library.
